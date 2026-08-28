@@ -181,6 +181,39 @@ button.ghost:hover{background:var(--paper)}
 }
 
 /* ---- record rows ---- */
+.owner{
+  margin-top:18px;
+  border:1px solid var(--rule-strong);
+  border-top:3px solid var(--ink);
+  padding:14px 16px;
+  background:#fbfbf9;
+}
+.owner-label{
+  display:block;
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.14em;
+  color:var(--muted);
+}
+.owner-name{display:block;font-size:17px;font-weight:700;margin-top:3px}
+.owner-ns{
+  display:block;font-family:var(--mono);font-size:12px;
+  color:var(--muted);margin-top:5px;line-height:1.7;word-break:break-all;
+  white-space:pre-line;
+}
+.owner p{margin:10px 0 0;font-size:13.5px}
+.owner details{margin-top:10px;border-top:1px dotted var(--rule);padding-top:9px}
+.owner summary{
+  font-size:13px;font-weight:700;cursor:pointer;
+  list-style:none;color:var(--muted);
+}
+.owner summary::-webkit-details-marker{display:none}
+.owner summary::before{content:"＋ ";font-family:var(--mono)}
+.owner details[open] summary::before{content:"− "}
+.owner summary:hover{color:var(--ink)}
+.owner summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.owner details p{font-size:13px;line-height:1.75;margin-top:9px}
+
 .rec-group{margin-top:22px}
 .rec-type{
   font-family:var(--mono);
@@ -294,12 +327,41 @@ footer p{margin:0 0 6px}
     {n:'CNAME',code:5,desc:'別のホスト名への転送'},
     {n:'A',code:1,desc:'IPv4アドレス'},
     {n:'AAAA',code:28,desc:'IPv6アドレス'},
-    {n:'NS',code:2,desc:'このドメインを管理するネームサーバー'},
     {n:'TXT',code:16,desc:'認証用などの文字列'},
     {n:'MX',code:15,desc:'メールの受信先'},
     {n:'CAA',code:257,desc:'証明書を発行できる認証局'}
   ];
   var TYPE_BY_CODE={1:'A',2:'NS',5:'CNAME',15:'MX',16:'TXT',28:'AAAA',257:'CAA'};
+
+  // ネームサーバーから、実際にレコードを編集すべき管理画面を判定する
+  var NS_PROVIDERS=[
+    [/(^|\.)dnsv\.jp$/,'お名前.com（DNSレコード設定）','お名前.com Navi の「ネームサーバー / DNS」→「ドメインのDNS設定」から編集できます。'],
+    [/(^|\.)gmoserver\.jp$/,'お名前.com レンタルサーバー','お名前.com Navi ではなく、レンタルサーバーのコントロールパネルで設定してください。お名前.com Navi の「DNSレコード設定」で編集しても反映されません。'],
+    [/awsdns/i,'Amazon Route 53','AWS マネジメントコンソールの Route 53 で編集してください。ドメインを購入した会社の管理画面で設定しても反映されません。'],
+    [/(^|\.)cloudflare\.com$/,'Cloudflare','Cloudflare のダッシュボード（DNS）で編集してください。'],
+    [/(^|\.)sakura\.ne\.jp$|(^|\.)dns\.ne\.jp$/,'さくらインターネット','さくらのコントロールパネルで編集してください。'],
+    [/(^|\.)xserver\.(jp|ne\.jp)$/,'エックスサーバー','エックスサーバーのサーバーパネル（DNSレコード設定）で編集してください。'],
+    [/(^|\.)lolipop\.jp$/,'ロリポップ','ロリポップのユーザー専用ページで編集してください。'],
+    [/(^|\.)heteml\.jp$/,'heteml','heteml のコントロールパネルで編集してください。'],
+    [/(^|\.)muumuu-domain\.com$/,'ムームードメイン','ムームードメインのコントロールパネルで編集してください。'],
+    [/(^|\.)value-domain\.com$/,'バリュードメイン','バリュードメインの管理画面で編集してください。'],
+    [/(^|\.)conoha\.io$/,'ConoHa','ConoHa のコントロールパネルで編集してください。'],
+    [/azure-dns/i,'Azure DNS','Azure ポータルで編集してください。'],
+    [/(^|\.)onamae\.com$/,'お名前.com','お名前.com Navi で編集してください。'],
+    [/(^|\.)nsone\.net$/,'NS1',''],
+    [/(^|\.)wixdns\.net$/,'Wix','Wix の管理画面で編集してください。'],
+    [/(^|\.)shifter\.jp$/,'Shifter','']
+  ];
+  function nsProvider(list){
+    for(var i=0;i<NS_PROVIDERS.length;i++){
+      for(var j=0;j<list.length;j++){
+        if(NS_PROVIDERS[i][0].test(list[j])){
+          return {name:NS_PROVIDERS[i][1],hint:NS_PROVIDERS[i][2]};
+        }
+      }
+    }
+    return null;
+  }
 
   var $=function(id){return document.getElementById(id)};
   var out=$('out'), runBtn=$('run');
@@ -361,10 +423,13 @@ footer p{margin:0 0 6px}
     out.innerHTML='<div class="err" style="border-color:var(--rule-strong);border-left-color:var(--ink)">'+
       '<h2>確認しています</h2><p>'+esc(domain)+' の設定を照会中です。</p></div>';
 
-    Promise.all(TYPES.map(function(t){
-      return query(domain,t.n).then(function(j){return {t:t,j:j}})
-        .catch(function(){return {t:t,j:null}});
-    })).then(function(res){ render(domain,expected,expectedType,res) })
+    Promise.all([
+      Promise.all(TYPES.map(function(t){
+        return query(domain,t.n).then(function(j){return {t:t,j:j}})
+          .catch(function(){return {t:t,j:null}});
+      })),
+      query(baseDomain(domain),'NS').catch(function(){return null})
+    ]).then(function(r){ render(domain,expected,expectedType,r[0],r[1]) })
       .catch(function(){
         out.innerHTML='<div class="err"><h2>照会できませんでした</h2>'+
           '<p>通信がブロックされている可能性があります。ネットワークを変えて再度お試しください。</p></div>';
@@ -372,7 +437,7 @@ footer p{margin:0 0 6px}
       .then(function(){ runBtn.disabled=false; runBtn.textContent='確認する' });
   }
 
-  function render(domain,expected,expectedType,res){
+  function render(domain,expected,expectedType,res,nsJson){
     var map={}, nxdomain=true, anyAnswer=false;
 
     res.forEach(function(r){
@@ -450,6 +515,30 @@ footer p{margin:0 0 6px}
           '<p>'+esc(note.body)+'</p>'+
         '</div>';
 
+    // 管理元（ゾーン頂点のネームサーバー）
+    var nsList=[];
+    if(nsJson&&nsJson.Answer){
+      nsJson.Answer.forEach(function(a){ if(a.type===2) nsList.push(tidy(a.data)) });
+    }
+    if(nsList.length){
+      var prov=nsProvider(nsList);
+      html+='<div class="owner">'+
+        '<span class="owner-label">DNS MANAGED BY</span>'+
+        '<span class="owner-name">'+esc(prov?prov.name:'このネームサーバーの提供元')+'</span>'+
+        '<span class="owner-ns">'+esc(nsList.join('\n'))+'</span>'+
+        '<p>'+esc(prov&&prov.hint?prov.hint:
+          'レコードの追加・変更は、上記のネームサーバーを提供している会社の管理画面で行ってください。別の管理画面で設定しても反映されません。')+'</p>'+
+        '<details><summary>ドメインを買った会社と管理場所が違うのはなぜ？</summary>'+
+          '<p>ドメインには「購入・更新の窓口」と「向き先の管理」という別々の役割があり、'+
+          '別々の会社に分けて預けることができます。上に表示されているのは後者、'+
+          '実際に向き先を管理している場所です。</p>'+
+          '<p>取得しただけで自動的にこうなることはなく、過去にどなたかがネームサーバーを'+
+          '変更しています。サイトの制作会社や開発会社が構築時に設定しているケースが多いため、'+
+          '心当たりがない場合は、サイトを作った会社にご確認ください。</p>'+
+        '</details>'+
+      '</div>';
+    }
+
     TYPES.forEach(function(t){
       var rows=map[t.n]||[];
       html+='<div class="rec-group"><div class="rec-type">'+t.n+' &nbsp;— &nbsp;'+esc(t.desc)+'</div>';
@@ -471,7 +560,7 @@ footer p{margin:0 0 6px}
       '</div></div>';
 
     out.innerHTML=html;
-    lastText=asText(domain,(expectedType?expectedType+' ':'')+expected,stamp,verdict,map);
+    lastText=asText(domain,(expectedType?expectedType+' ':'')+expected,stamp,verdict,map,nsList);
     $('copy').addEventListener('click',function(){
       navigator.clipboard.writeText(lastText).then(function(){
         var c=$('copied'); c.hidden=false; setTimeout(function(){c.hidden=true},2000);
@@ -481,12 +570,17 @@ footer p{margin:0 0 6px}
 
   function p(n){return n<10?'0'+n:''+n}
 
-  function asText(domain,expected,stamp,verdict,map){
+  function asText(domain,expected,stamp,verdict,map,nsList){
     var L=['【ドメイン設定 確認結果】',
       'ドメイン: '+domain,
       '照会日時: '+stamp,
       '判定: '+verdict.label.replace('<br>','')];
     if(expected)L.push('必要な設定: '+expected);
+    if(nsList&&nsList.length){
+      var prov=nsProvider(nsList);
+      L.push('DNS管理元: '+(prov?prov.name:'不明'));
+      L.push('ネームサーバー: '+nsList.join(' / '));
+    }
     L.push('');
     TYPES.forEach(function(t){
       var rows=map[t.n]||[];
@@ -501,6 +595,12 @@ footer p{margin:0 0 6px}
     var p=d.split('.');
     if(p.length<3)return false;
     return p.length>(SLD[p[p.length-2]]?3:2);
+  }
+  // NSはゾーンの頂点にしかないので、登録ドメイン単位で引く
+  function baseDomain(d){
+    var p=d.split('.');
+    var n=SLD[p[p.length-2]]?3:2;
+    return p.slice(Math.max(0,p.length-n)).join('.');
   }
 
   var modeTouched=false;
