@@ -457,13 +457,29 @@ footer p{margin:0 0 6px}
   }
   function tidy(v){return String(v).replace(/\.$/,'').replace(/^"|"$/g,'')}
 
+  // 応答がない場合に画面が止まらないよう、必ず時間で打ち切る
+  function fetchT(url,opts,ms){
+    opts=opts||{};
+    if(typeof AbortController==='undefined'){
+      return Promise.race([
+        fetch(url,opts),
+        new Promise(function(_,rej){ setTimeout(function(){rej(new Error('timeout'))},ms||10000) })
+      ]);
+    }
+    var ac=new AbortController();
+    var timer=setTimeout(function(){ac.abort()},ms||10000);
+    opts.signal=ac.signal;
+    return fetch(url,opts).then(function(r){clearTimeout(timer);return r},
+      function(e){clearTimeout(timer);throw (e&&e.name==='AbortError')?new Error('timeout'):e});
+  }
+
   function query(name,type){
     var cf='https://cloudflare-dns.com/dns-query?name='+encodeURIComponent(name)+'&type='+type;
     var gg='https://dns.google/resolve?name='+encodeURIComponent(name)+'&type='+type;
-    return fetch(cf,{headers:{'accept':'application/dns-json'}})
+    return fetchT(cf,{headers:{'accept':'application/dns-json'}},8000)
       .then(function(r){if(!r.ok)throw 0;return r.json()})
       .catch(function(){
-        return fetch(gg,{headers:{'accept':'application/dns-json'}})
+        return fetchT(gg,{headers:{'accept':'application/dns-json'}},8000)
           .then(function(r){if(!r.ok)throw new Error('lookup failed');return r.json()});
       });
   }
@@ -490,8 +506,16 @@ footer p{margin:0 0 6px}
     }
 
     runBtn.disabled=true; runBtn.textContent='確認中…';
-    out.innerHTML='<div class="err" style="border-color:var(--rule-strong);border-left-color:var(--ink)">'+
-      '<h2>確認しています</h2><p>'+esc(domain)+' の設定を照会中です。</p></div>';
+
+    var t0=Date.now();
+    function paintLoading(){
+      var sec=Math.floor((Date.now()-t0)/1000);
+      out.innerHTML='<div class="err" style="border-color:var(--rule-strong);border-left-color:var(--ink)">'+
+        '<h2>確認しています</h2><p>'+esc(domain)+' の設定を照会中です。</p>'+
+        '<p style="margin-top:8px;font-family:var(--mono);font-size:11.5px">経過 '+sec+' 秒</p></div>';
+    }
+    paintLoading();
+    var tick=setInterval(paintLoading,1000);
 
     Promise.all([
       Promise.all(TYPES.map(function(t){
@@ -500,11 +524,16 @@ footer p{margin:0 0 6px}
       })),
       query(baseDomain(domain),'NS').catch(function(){return null})
     ]).then(function(r){ render(domain,expected,expectedType,r[0],r[1]) })
-      .catch(function(){
+      .catch(function(e){
+        var why=(e&&e.message)||'';
         out.innerHTML='<div class="err"><h2>照会できませんでした</h2>'+
-          '<p>通信がブロックされている可能性があります。ネットワークを変えて再度お試しください。</p></div>';
+          '<p>通信がブロックされているか、応答がありませんでした。ネットワークを変えて再度お試しください。</p>'+
+          '<p style="margin-top:8px;font-family:var(--mono);font-size:11.5px">詳細: '+esc(why)+'</p></div>';
       })
-      .then(function(){ runBtn.disabled=false; runBtn.textContent='確認する' });
+      .then(function(){
+        clearInterval(tick);
+        runBtn.disabled=false; runBtn.textContent='確認する';
+      });
   }
 
   function render(domain,expected,expectedType,res,nsJson){
@@ -783,23 +812,60 @@ footer p{margin:0 0 6px}
       return;
     }
 
-    expBtn.disabled=true; expBtn.textContent='確認中…';
-    outExp.innerHTML='<div class="err" style="border-color:var(--rule-strong);border-left-color:var(--ink)">'+
-      '<h2>確認しています</h2><p>'+esc(domain)+' の登録情報を照会中です。</p></div>';
+    // レジストリへ直接問い合わせる。rdap.org はリダイレクトを挟むぶん遅いのでフォールバック扱い
+    var REGISTRY={
+      com:'https://rdap.verisign.com/com/v1/domain/',
+      net:'https://rdap.verisign.com/net/v1/domain/',
+      org:'https://rdap.publicinterestregistry.org/rdap/domain/'
+    };
+    var endpoints=[];
+    if(REGISTRY[tld]) endpoints.push(REGISTRY[tld]+encodeURIComponent(domain));
+    endpoints.push('https://rdap.org/domain/'+encodeURIComponent(domain));
 
-    fetch('https://rdap.org/domain/'+encodeURIComponent(domain),{headers:{'accept':'application/rdap+json'}})
-      .then(function(r){
-        if(r.status===404)return {__notfound:true};
-        if(!r.ok)throw new Error('status '+r.status);
-        return r.json();
-      })
+    expBtn.disabled=true; expBtn.textContent='確認中…';
+
+    var t0=Date.now(), tick;
+    function paintLoading(){
+      var sec=Math.floor((Date.now()-t0)/1000);
+      outExp.innerHTML='<div class="err" style="border-color:var(--rule-strong);border-left-color:var(--ink)">'+
+        '<h2>確認しています</h2>'+
+        '<p>'+esc(domain)+' の登録情報を照会中です。'+
+        (sec>=4?'照会先が混み合っているようです。もう少しお待ちください。':'')+'</p>'+
+        '<p style="margin-top:8px;font-family:var(--mono);font-size:11.5px">経過 '+sec+' 秒</p></div>';
+    }
+    paintLoading();
+    tick=setInterval(paintLoading,1000);
+
+    var reasons=[];
+    function attempt(i){
+      if(i>=endpoints.length)return Promise.reject(new Error(reasons.join(' / ')||'unknown'));
+      return fetchT(endpoints[i],{headers:{'accept':'application/rdap+json'}},9000)
+        .then(function(r){
+          if(r.status===404)return {__notfound:true};
+          if(!r.ok)throw new Error('HTTP '+r.status);
+          return r.json();
+        })
+        .catch(function(e){
+          reasons.push((e&&e.message)||'通信エラー');
+          return attempt(i+1);
+        });
+    }
+
+    attempt(0)
       .then(function(j){ renderExp(domain,j) })
-      .catch(function(){
+      .catch(function(e){
+        var why=(e&&e.message)||'';
+        var msg = why.indexOf('timeout')>=0
+          ? '応答がありませんでした。回線が混み合っているか、照会先が一時的に停止している可能性があります。'
+          : 'このドメインの登録機関が情報を公開していないか、ブラウザから直接照会できない設定になっている可能性があります。';
         outExp.innerHTML='<div class="err"><h2>登録情報を取得できませんでした</h2>'+
-          '<p>このドメインの登録機関が情報を公開していないか、一時的に混み合っている可能性があります。'+
-          '少し時間をおいて再度お試しいただくか、ドメインを取得された会社の管理画面でご確認ください。</p></div>';
+          '<p>'+esc(msg)+'少し時間をおいて再度お試しいただくか、ドメインを取得された会社の管理画面でご確認ください。</p>'+
+          '<p style="margin-top:8px;font-family:var(--mono);font-size:11.5px">詳細: '+esc(why)+'</p></div>';
       })
-      .then(function(){ expBtn.disabled=false; expBtn.textContent='確認する' });
+      .then(function(){
+        clearInterval(tick);
+        expBtn.disabled=false; expBtn.textContent='確認する';
+      });
   }
 
   function renderExp(domain,j){
