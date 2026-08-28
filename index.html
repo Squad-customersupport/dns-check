@@ -214,6 +214,53 @@ button.ghost:hover{background:var(--paper)}
 .owner summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .owner details p{font-size:13px;line-height:1.75;margin-top:9px}
 
+/* ---- tabs ---- */
+.tabs{display:flex;margin-bottom:-1px;position:relative;z-index:1;flex-wrap:wrap}
+.tab{
+  font-family:var(--jp);
+  font-size:14px;font-weight:400;
+  padding:11px 20px;
+  margin:0 4px 0 0;
+  border:1px solid var(--rule-strong);
+  border-bottom:1px solid var(--rule-strong);
+  background:#dcddd6;
+  color:var(--muted);
+  cursor:pointer;
+  border-radius:0;
+}
+.tab:hover{background:#e4e5de;color:var(--ink)}
+.tab[aria-selected=true]{
+  background:var(--card);
+  color:var(--ink);
+  font-weight:700;
+  border-bottom-color:var(--card);
+}
+.tab:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
+.panel[hidden]{display:none}
+.panel-lede{margin:0 0 20px;color:var(--muted);font-size:14px;line-height:1.7}
+
+/* ---- expiry ---- */
+.days{
+  display:block;
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--muted);
+  margin-top:3px;
+}
+.status-list{margin:11px 0 0;padding:0;list-style:none}
+.status-list li{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:4px 12px;
+  padding:6px 0;
+  border-bottom:1px dotted var(--rule);
+  align-items:baseline;
+  font-size:13.5px;
+}
+.status-list li:last-child{border-bottom:none}
+.status-code{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.status-warn{color:var(--bad);font-weight:700}
+
 .rec-group{margin-top:22px}
 .rec-type{
   font-family:var(--mono);
@@ -282,40 +329,63 @@ footer p{margin:0 0 6px}
 <body>
 <div class="wrap">
 
-  <p class="eyebrow">Domain / DNS check</p>
-  <h1>ドメインの向き先を確認する</h1>
-  <p class="lede">配信用ドメインが正しく設定されているかを、いま実際に公開されている情報から確認します。設定を変更するものではないので、何度実行しても安全です。</p>
+  <p class="eyebrow">Domain check</p>
+  <h1>ドメインの状態を確認する</h1>
 
-  <div class="form">
-    <div class="field">
-      <label for="domain">確認するドメイン</label>
-      <span class="hint">例：lp.example.co.jp（https:// や / 以降は入れても自動で除きます）</span>
-      <input type="text" id="domain" placeholder="lp.example.co.jp" autocomplete="off" spellcheck="false" inputmode="url">
-    </div>
-    <div class="field">
-      <label id="modeLabel">どちらの設定をしましたか</label>
-      <span class="hint">ドメインを入力すると自動で選ばれます。違っていれば選び直してください。</span>
-      <div class="modes" role="radiogroup" aria-labelledby="modeLabel">
-        <label class="mode">
-          <input type="radio" name="mode" value="sub" checked>
-          <span><b>サブドメインで配信</b><em>sb.example.co.jp など ／ CNAME → fallback.mysquadbeyond.com</em></span>
-        </label>
-        <label class="mode">
-          <input type="radio" name="mode" value="apex">
-          <span><b>本ドメインで配信</b><em>example.co.jp ／ A → 104.16.117.60</em></span>
-        </label>
-      </div>
-    </div>
-    <div class="actions">
-      <button id="run">確認する</button>
-      <button id="clear" class="ghost" type="button">入力を消す</button>
-    </div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-dns" data-panel="dns" aria-selected="true" aria-controls="panel-dns">向き先の確認</button>
+    <button class="tab" role="tab" id="tab-exp" data-panel="exp" aria-selected="false" aria-controls="panel-exp">有効期限の確認</button>
   </div>
 
-  <div id="out" aria-live="polite"></div>
+  <section class="panel" id="panel-dns" role="tabpanel" aria-labelledby="tab-dns">
+    <div class="form">
+      <p class="panel-lede">配信用ドメインが正しく設定されているかを、いま実際に公開されている情報から確認します。設定を変更するものではないので、何度実行しても安全です。</p>
+      <div class="field">
+        <label for="domain">確認するドメイン</label>
+        <span class="hint">例：lp.example.co.jp（https:// や / 以降は入れても自動で除きます）</span>
+        <input type="text" id="domain" placeholder="lp.example.co.jp" autocomplete="off" spellcheck="false" inputmode="url">
+      </div>
+      <div class="field">
+        <label id="modeLabel">どちらの設定をしましたか</label>
+        <span class="hint">ドメインを入力すると自動で選ばれます。違っていれば選び直してください。</span>
+        <div class="modes" role="radiogroup" aria-labelledby="modeLabel">
+          <label class="mode">
+            <input type="radio" name="mode" value="sub" checked>
+            <span><b>サブドメインで配信</b><em>sb.example.co.jp など ／ CNAME → fallback.mysquadbeyond.com</em></span>
+          </label>
+          <label class="mode">
+            <input type="radio" name="mode" value="apex">
+            <span><b>本ドメインで配信</b><em>example.co.jp ／ A → 104.16.117.60</em></span>
+          </label>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="run">確認する</button>
+        <button id="clear" class="ghost" type="button">入力を消す</button>
+      </div>
+    </div>
+    <div id="out" aria-live="polite"></div>
+  </section>
+
+  <section class="panel" id="panel-exp" role="tabpanel" aria-labelledby="tab-exp" hidden>
+    <div class="form">
+      <p class="panel-lede">ドメインの有効期限が切れていないか、配信を止めるステータスが付いていないかを確認します。期限が切れるとDNS設定が正しくてもページは表示されなくなります。</p>
+      <div class="field">
+        <label for="domainExp">確認するドメイン</label>
+        <span class="hint">サブドメインを入れた場合は、その大元のドメインを確認します。</span>
+        <input type="text" id="domainExp" placeholder="example.com" autocomplete="off" spellcheck="false" inputmode="url">
+      </div>
+      <div class="actions">
+        <button id="runExp">確認する</button>
+        <button id="clearExp" class="ghost" type="button">入力を消す</button>
+      </div>
+    </div>
+    <div id="outExp" aria-live="polite"></div>
+  </section>
 
   <footer>
-    <p>この確認は公開DNS（Cloudflare / Google）に問い合わせた結果です。設定変更の直後は、反映まで数分〜数十分かかることがあります。</p>
+    <p>向き先の確認は公開DNS（Cloudflare / Google）に問い合わせた結果です。設定変更の直後は、反映まで数分〜数十分かかることがあります。</p>
+    <p>有効期限の確認は各ドメイン登録機関が公開している情報（RDAP）に基づきます。.jp や .de などの一部のドメインは、この方法で情報を公開していないため確認できません。</p>
     <p>SSL証明書の状態や、社内ネットワーク固有の名前解決はここでは確認できません。表示が食い違う場合は、結果をコピーしてサポートまでお送りください。</p>
   </footer>
 
@@ -623,6 +693,237 @@ footer p{margin:0 0 6px}
     modeTouched=false;
     document.querySelector('input[name=mode][value="sub"]').checked=true;
     $('domain').focus();
+  });
+
+  /* ================= タブ切替 ================= */
+  var tabs=Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  function selectTab(name){
+    tabs.forEach(function(t){
+      var on=t.getAttribute('data-panel')===name;
+      t.setAttribute('aria-selected',on?'true':'false');
+      $('panel-'+t.getAttribute('data-panel')).hidden=!on;
+    });
+  }
+  tabs.forEach(function(t){
+    t.addEventListener('click',function(){ selectTab(t.getAttribute('data-panel')) });
+  });
+
+  /* ================= 有効期限の確認（RDAP） ================= */
+
+  // RDAPで情報を公開していない主なccTLD
+  var NO_RDAP={jp:1,de:1,eu:1,cn:1,kr:1};
+
+  // RDAPのステータス（RFC 8056）。sev=1 は配信に影響するもの
+  var STATUS_MAP={
+    'client hold':['配信停止中（登録会社による保留）',1],
+    'server hold':['配信停止中（登録機関による保留）',1],
+    'pending delete':['削除処理中',1],
+    'redemption period':['期限切れ後の復旧猶予期間',1],
+    'pending restore':['復旧手続き中',1],
+    'pending transfer':['移管手続き中',0],
+    'pending renew':['更新手続き中',0],
+    'auto renew period':['自動更新の処理期間',0],
+    'renew period':['更新の処理期間',0],
+    'transfer period':['移管後の処理期間',0],
+    'add period':['登録直後の処理期間',0],
+    'inactive':['ネームサーバー未設定',1],
+    'active':['通常',0],
+    'ok':['通常',0],
+    'client transfer prohibited':['移管ロック（通常の状態）',0],
+    'server transfer prohibited':['移管ロック（登録機関による）',0],
+    'client update prohibited':['更新ロック（通常の状態）',0],
+    'server update prohibited':['更新ロック（登録機関による）',0],
+    'client delete prohibited':['削除ロック（通常の状態）',0],
+    'server delete prohibited':['削除ロック（登録機関による）',0],
+    'client renew prohibited':['更新ロック（登録会社による）',0],
+    'server renew prohibited':['更新ロック（登録機関による）',0]
+  };
+
+  function rdapEvent(j,action){
+    var ev=(j.events||[]).filter(function(x){return x.eventAction===action})[0];
+    return ev?ev.eventDate:null;
+  }
+  function rdapRegistrar(j){
+    var ents=j.entities||[];
+    for(var i=0;i<ents.length;i++){
+      if((ents[i].roles||[]).indexOf('registrar')<0)continue;
+      var vc=ents[i].vcardArray&&ents[i].vcardArray[1];
+      if(!vc)continue;
+      for(var k=0;k<vc.length;k++){ if(vc[k][0]==='fn') return vc[k][3] }
+    }
+    return null;
+  }
+  function fmtDate(iso){
+    var d=new Date(iso);
+    if(isNaN(d))return iso;
+    return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+  }
+  function daysUntil(iso){
+    var d=new Date(iso);
+    if(isNaN(d))return null;
+    return Math.floor((d-new Date())/86400000);
+  }
+
+  var expBtn=$('runExp'), outExp=$('outExp');
+
+  function runExp(){
+    var raw=normalize($('domainExp').value);
+    if(!valid(raw)){
+      outExp.innerHTML='<div class="err"><h2>ドメインを確認してください</h2>'+
+        '<p>「example.com」のような形式で入力してください。</p></div>';
+      return;
+    }
+    var domain=baseDomain(raw);
+    var tld=domain.split('.').pop();
+
+    if(NO_RDAP[tld]){
+      outExp.innerHTML='<div class="err"><h2>このドメインは自動確認に対応していません</h2>'+
+        '<p>.'+esc(tld)+' は、有効期限を機械的に取得する仕組み（RDAP）で情報を公開していません。'+
+        'お手数ですが、ドメインを取得された会社の管理画面でご確認ください。</p></div>';
+      return;
+    }
+
+    expBtn.disabled=true; expBtn.textContent='確認中…';
+    outExp.innerHTML='<div class="err" style="border-color:var(--rule-strong);border-left-color:var(--ink)">'+
+      '<h2>確認しています</h2><p>'+esc(domain)+' の登録情報を照会中です。</p></div>';
+
+    fetch('https://rdap.org/domain/'+encodeURIComponent(domain),{headers:{'accept':'application/rdap+json'}})
+      .then(function(r){
+        if(r.status===404)return {__notfound:true};
+        if(!r.ok)throw new Error('status '+r.status);
+        return r.json();
+      })
+      .then(function(j){ renderExp(domain,j) })
+      .catch(function(){
+        outExp.innerHTML='<div class="err"><h2>登録情報を取得できませんでした</h2>'+
+          '<p>このドメインの登録機関が情報を公開していないか、一時的に混み合っている可能性があります。'+
+          '少し時間をおいて再度お試しいただくか、ドメインを取得された会社の管理画面でご確認ください。</p></div>';
+      })
+      .then(function(){ expBtn.disabled=false; expBtn.textContent='確認する' });
+  }
+
+  function renderExp(domain,j){
+    if(j.__notfound){
+      outExp.innerHTML='<div class="err"><h2>このドメインは登録されていません</h2>'+
+        '<p>綴りをご確認ください。すでに手放されている場合や、期限切れから時間が経って抹消された場合もこの表示になります。</p></div>';
+      return;
+    }
+
+    var exp=rdapEvent(j,'expiration');
+    var reg=rdapEvent(j,'registration');
+    var upd=rdapEvent(j,'last changed');
+    var registrar=rdapRegistrar(j);
+    var statuses=(j.status||[]).map(function(s){return String(s).toLowerCase()});
+    var blocking=statuses.filter(function(s){return STATUS_MAP[s]&&STATUS_MAP[s][1]===1});
+
+    var days=exp?daysUntil(exp):null;
+    var verdict,note;
+
+    if(blocking.length){
+      verdict={cls:'bad',label:'停止中'};
+      note={cls:'bad',title:'配信を止めるステータスが付いています',
+        rows:exp?[['有効期限',fmtDate(exp)]]:null,
+        body:'下記のステータスにより、DNS設定が正しくてもページが表示されない状態です。ドメインを取得された会社にご連絡ください。'};
+    }else if(days===null){
+      verdict={cls:'warn',label:'期限<br>不明'};
+      note={cls:'warn',title:'有効期限が公開されていません',
+        body:'この登録機関は有効期限を公開していません。ドメインを取得された会社の管理画面でご確認ください。'};
+    }else if(days<0){
+      verdict={cls:'bad',label:'期限<br>切れ'};
+      note={cls:'bad',title:'有効期限が過ぎています',
+        rows:[['有効期限',fmtDate(exp)+'（'+Math.abs(days)+'日前）']],
+        body:'ページが表示されない原因はこれの可能性が高いです。ドメインを取得された会社の管理画面で、至急更新のお手続きをお願いします。'};
+    }else if(days<=30){
+      verdict={cls:'warn',label:'期限<br>間近'};
+      note={cls:'warn',title:'まもなく有効期限を迎えます',
+        rows:[['有効期限',fmtDate(exp)+'（あと'+days+'日）']],
+        body:'期限が切れるとページが表示されなくなります。自動更新の設定と、登録されているお支払い方法をご確認ください。'};
+    }else{
+      verdict={cls:'ok',label:'有効'};
+      note={cls:'ok',title:'有効期限に問題はありません',
+        rows:[['有効期限',fmtDate(exp)+'（あと'+days+'日）']],
+        body:'ページが表示されない場合は、「向き先の確認」タブもあわせてご確認ください。'};
+    }
+
+    var now=new Date();
+    var stamp=now.getFullYear()+'-'+p(now.getMonth()+1)+'-'+p(now.getDate())+' '+p(now.getHours())+':'+p(now.getMinutes());
+
+    var html='<div class="slip">'+
+      '<div class="verdict '+verdict.cls+'"><span>'+verdict.label+'</span></div>'+
+      '<div class="slip-head">'+
+        '<div class="slip-domain">'+esc(domain)+'</div>'+
+        '<div class="slip-meta">照会 '+stamp+'</div>'+
+      '</div>'+
+      '<div class="note '+note.cls+'">'+
+        '<strong>'+esc(note.title)+'</strong>'+
+        (note.rows?'<dl class="note-rows">'+note.rows.map(function(r){
+          return '<dt>'+esc(r[0])+'</dt><dd>'+esc(r[1])+'</dd>';
+        }).join('')+'</dl>':'')+
+        '<p>'+esc(note.body)+'</p>'+
+      '</div>';
+
+    if(registrar){
+      html+='<div class="owner">'+
+        '<span class="owner-label">REGISTERED WITH</span>'+
+        '<span class="owner-name">'+esc(registrar)+'</span>'+
+        '<p>更新のお手続きは、こちらの管理画面から行えます。</p>'+
+      '</div>';
+    }
+
+    var dates=[];
+    if(reg)dates.push(['登録日',fmtDate(reg)]);
+    if(upd)dates.push(['最終更新日',fmtDate(upd)]);
+    if(dates.length){
+      html+='<div class="rec-group"><div class="rec-type">DATES</div>';
+      dates.forEach(function(d){
+        html+='<div class="rec"><div><span class="rec-val">'+esc(d[1])+'</span></div>'+
+          '<div class="rec-ttl">'+esc(d[0])+'</div></div>';
+      });
+      html+='</div>';
+    }
+
+    html+='<div class="rec-group"><div class="rec-type">STATUS &nbsp;— &nbsp;ドメインの現在の状態</div>';
+    if(!statuses.length){
+      html+='<div class="rec-none">公開されていません</div>';
+    }else{
+      html+='<ul class="status-list">';
+      statuses.forEach(function(s){
+        var m=STATUS_MAP[s];
+        html+='<li><span class="status-code">'+esc(s)+'</span>'+
+          '<span'+(m&&m[1]===1?' class="status-warn"':'')+'>'+esc(m?m[0]:'—')+'</span></li>';
+      });
+      html+='</ul>';
+    }
+    html+='</div>';
+
+    html+='<div class="slip-foot">'+
+      '<button class="ghost" id="copyExp" type="button">この結果をコピー</button>'+
+      '<span class="copied" id="copiedExp" hidden>コピーしました</span>'+
+    '</div></div>';
+
+    outExp.innerHTML=html;
+
+    var txt=['【ドメイン有効期限 確認結果】',
+      'ドメイン: '+domain,
+      '照会日時: '+stamp,
+      '判定: '+verdict.label.replace('<br>','')];
+    if(exp)txt.push('有効期限: '+fmtDate(exp)+(days!==null?'（あと'+days+'日）':''));
+    if(reg)txt.push('登録日: '+fmtDate(reg));
+    if(registrar)txt.push('登録会社: '+registrar);
+    if(statuses.length)txt.push('ステータス: '+statuses.join(' / '));
+    var expText=txt.join('\n');
+
+    $('copyExp').addEventListener('click',function(){
+      navigator.clipboard.writeText(expText).then(function(){
+        var c=$('copiedExp'); c.hidden=false; setTimeout(function(){c.hidden=true},2000);
+      });
+    });
+  }
+
+  expBtn.addEventListener('click',runExp);
+  $('domainExp').addEventListener('keydown',function(e){if(e.key==='Enter')runExp()});
+  $('clearExp').addEventListener('click',function(){
+    $('domainExp').value=''; outExp.innerHTML=''; $('domainExp').focus();
   });
 })();
 </script>
