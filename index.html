@@ -159,6 +159,26 @@ button.ghost:hover{background:var(--paper)}
 .note.bad{border-left-color:var(--bad)}
 .note.warn{border-left-color:var(--warn)}
 .note strong{display:block;margin-bottom:2px}
+.note p{margin:0}
+.note-rows{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:5px 14px;
+  margin:11px 0 12px;
+}
+.note-rows dt{font-weight:700;font-size:13px;white-space:nowrap;color:var(--muted)}
+.note-rows dd{
+  margin:0;
+  font-family:var(--mono);
+  font-size:13.5px;
+  line-height:1.6;
+  word-break:break-all;
+  white-space:pre-line;
+}
+@media (max-width:560px){
+  .note-rows{grid-template-columns:1fr;gap:2px}
+  .note-rows dd{margin-bottom:6px}
+}
 
 /* ---- record rows ---- */
 .rec-group{margin-top:22px}
@@ -384,24 +404,27 @@ footer p{margin:0 0 6px}
         body:'ドメイン自体が存在しないか、DNSレコードがまだ登録されていません。綴りを確認するか、ドメインの管理画面でレコードを追加してください。'};
     }else if(expected){
       var want=expectedType?[expectedType]:['CNAME','A','AAAA'];
-      var need=(expectedType?expectedType+' ':'')+expected;
+      var need=(expectedType?expectedType+'　':'')+expected;
       var hit=false, mine=[], all=[];
       want.forEach(function(k){(map[k]||[]).forEach(function(x){mine.push(x.v)})});
-      ['CNAME','A','AAAA'].forEach(function(k){(map[k]||[]).forEach(function(x){all.push(k+' '+x.v)})});
+      ['CNAME','A','AAAA'].forEach(function(k){(map[k]||[]).forEach(function(x){all.push(k+'　'+x.v)})});
       mine.forEach(function(v){ if(v.toLowerCase()===expected.toLowerCase()) hit=true });
 
       if(hit){
         verdict={cls:'ok',label:'一致'};
         note={cls:'ok',title:'設定は正しく入っています',
-          body:'現在 '+need+' を向いています。それでもページが表示されない場合は、証明書の発行が終わっていない可能性があります。時間をおいて再度お試しください。'};
+          rows:[['必要な設定',need]],
+          body:'それでもページが表示されない場合は、証明書の発行が終わっていない可能性があります。少し時間をおいて、再度お試しください。'};
       }else if(all.length===0){
         verdict={cls:'bad',label:'未設定'};
         note={cls:'bad',title:'向き先のレコードがありません',
-          body:'CNAME・A・AAAA のいずれも登録されていません。ドメインの管理画面で '+need+' を追加してください。'};
+          rows:[['必要な設定',need]],
+          body:'CNAME・A・AAAA のいずれも登録されていません。ドメインの管理画面で、上記のレコードを追加してください。'};
       }else{
         verdict={cls:'bad',label:'不一致'};
         note={cls:'bad',title:'案内された値と違う設定になっています',
-          body:'必要な設定：'+need+' ／ 現在の設定：'+all.join('、')+'。古いレコードが残っていると新しい設定が反映されないので、削除してから登録し直してください。'};
+          rows:[['必要な設定',need],['現在の設定',all.join('\n')]],
+          body:'古いレコードが残っていると、新しい設定が反映されません。現在のレコードを削除してから、登録し直してください。'};
       }
     }else{
       verdict={cls:'warn',label:'現状<br>確認'};
@@ -419,7 +442,13 @@ footer p{margin:0 0 6px}
           '<div class="slip-domain">'+esc(domain)+'</div>'+
           '<div class="slip-meta">照会 '+stamp+'</div>'+
         '</div>'+
-        '<div class="note '+note.cls+'"><strong>'+esc(note.title)+'</strong>'+esc(note.body)+'</div>';
+        '<div class="note '+note.cls+'">'+
+          '<strong>'+esc(note.title)+'</strong>'+
+          (note.rows?'<dl class="note-rows">'+note.rows.map(function(r){
+            return '<dt>'+esc(r[0])+'</dt><dd>'+esc(r[1])+'</dd>';
+          }).join('')+'</dl>':'')+
+          '<p>'+esc(note.body)+'</p>'+
+        '</div>';
 
     TYPES.forEach(function(t){
       var rows=map[t.n]||[];
