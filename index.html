@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ドメイン設定チェック</title>
+<style>
+:root{
+  --ink:#15191f;
+  --paper:#e9eae4;
+  --card:#ffffff;
+  --rule:#cbcdc4;
+  --rule-strong:#9a9d93;
+  --ok:#1b6b4c;
+  --warn:#8f5c06;
+  --bad:#9e2b25;
+  --muted:#6b7079;
+  --jp:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic Medium",Meiryo,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Noto Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--jp);
+  font-size:15px;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  padding:32px 20px 80px;
+}
+.wrap{max-width:800px;margin:0 auto}
+
+/* ---- header ---- */
+.eyebrow{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.18em;
+  color:var(--muted);
+  text-transform:uppercase;
+  margin:0 0 10px;
+}
+h1{
+  font-size:30px;
+  line-height:1.25;
+  letter-spacing:-.02em;
+  font-weight:700;
+  margin:0 0 12px;
+}
+.lede{margin:0 0 32px;color:var(--muted);max-width:56ch}
+
+/* ---- form ---- */
+.form{
+  background:var(--card);
+  border:1px solid var(--rule-strong);
+  padding:24px;
+}
+.field + .field{margin-top:20px}
+label{display:block;font-weight:700;font-size:14px;margin-bottom:6px}
+.hint{display:block;font-weight:400;font-size:12.5px;color:var(--muted);margin-bottom:8px;line-height:1.6}
+input[type=text]{
+  width:100%;
+  font-family:var(--mono);
+  font-size:15px;
+  padding:11px 13px;
+  border:1px solid var(--rule-strong);
+  background:#fbfbf9;
+  color:var(--ink);
+  border-radius:0;
+}
+input[type=text]:focus-visible{outline:3px solid var(--ink);outline-offset:1px}
+.modes{display:grid;gap:8px;margin-top:4px}
+label.mode{
+  display:flex;gap:10px;align-items:flex-start;
+  font-weight:400;margin-bottom:0;
+  border:1px solid var(--rule);padding:11px 13px;
+  background:#fbfbf9;cursor:pointer;
+}
+label.mode:hover{border-color:var(--rule-strong)}
+label.mode:has(input:checked){border-color:var(--ink);background:#fff;box-shadow:inset 3px 0 0 var(--ink)}
+label.mode input{margin:4px 0 0;accent-color:var(--ink);flex:none}
+label.mode b{display:block;font-size:14px}
+label.mode em{
+  display:block;font-style:normal;font-family:var(--mono);
+  font-size:11.5px;color:var(--muted);margin-top:3px;word-break:break-all;
+}
+.actions{margin-top:24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+button{
+  font-family:var(--jp);
+  font-size:15px;
+  font-weight:700;
+  padding:12px 26px;
+  border:1px solid var(--ink);
+  background:var(--ink);
+  color:#fff;
+  cursor:pointer;
+  border-radius:0;
+}
+button:hover{background:#000}
+button:focus-visible{outline:3px solid var(--ok);outline-offset:2px}
+button[disabled]{opacity:.45;cursor:progress}
+button.ghost{background:transparent;color:var(--ink)}
+button.ghost:hover{background:var(--paper)}
+
+/* ---- result slip ---- */
+.slip{
+  position:relative;
+  margin-top:32px;
+  background:var(--card);
+  border:1px solid var(--rule-strong);
+  padding:24px;
+}
+.slip-head{
+  border-bottom:2px solid var(--ink);
+  padding-bottom:14px;
+  margin-bottom:4px;
+}
+.slip-domain{
+  font-family:var(--mono);
+  font-size:19px;
+  font-weight:700;
+  word-break:break-all;
+  padding-right:110px;
+}
+.slip-meta{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:4px}
+
+.verdict{
+  position:absolute;
+  top:20px;
+  right:20px;
+  width:92px;
+  height:92px;
+  border:3px double currentColor;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  font-weight:700;
+  font-size:15px;
+  line-height:1.25;
+  letter-spacing:.02em;
+  transform:rotate(-9deg);
+  animation:stamp .28s cubic-bezier(.2,1.3,.4,1) both;
+}
+@keyframes stamp{from{transform:rotate(-9deg) scale(1.5);opacity:0}to{transform:rotate(-9deg) scale(1);opacity:1}}
+.verdict.ok{color:var(--ok)}
+.verdict.bad{color:var(--bad)}
+.verdict.warn{color:var(--warn)}
+
+.note{
+  margin:18px 0 0;
+  padding:14px 16px;
+  border-left:4px solid var(--rule-strong);
+  background:#f5f5f1;
+  font-size:14px;
+}
+.note.ok{border-left-color:var(--ok)}
+.note.bad{border-left-color:var(--bad)}
+.note.warn{border-left-color:var(--warn)}
+.note strong{display:block;margin-bottom:2px}
+
+/* ---- record rows ---- */
+.rec-group{margin-top:22px}
+.rec-type{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.16em;
+  color:var(--muted);
+  border-bottom:1px solid var(--rule);
+  padding-bottom:4px;
+  margin-bottom:8px;
+}
+.rec{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:4px 16px;
+  padding:7px 0;
+  border-bottom:1px dotted var(--rule);
+  align-items:baseline;
+}
+.rec:last-child{border-bottom:none}
+.rec-val{font-family:var(--mono);font-size:14px;word-break:break-all}
+.rec-ttl{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+.rec-none{font-size:13.5px;color:var(--muted);padding:7px 0}
+.chain{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:2px}
+
+.slip-foot{
+  margin-top:26px;
+  padding-top:16px;
+  border-top:1px solid var(--rule);
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.copied{font-size:13px;color:var(--ok);font-weight:700}
+
+.err{
+  margin-top:32px;
+  background:var(--card);
+  border:1px solid var(--bad);
+  border-left:5px solid var(--bad);
+  padding:20px 22px;
+}
+.err h2{margin:0 0 6px;font-size:16px}
+.err p{margin:0;font-size:14px;color:var(--muted)}
+
+footer{
+  margin-top:40px;
+  font-size:12.5px;
+  color:var(--muted);
+  line-height:1.8;
+  border-top:1px solid var(--rule);
+  padding-top:18px;
+}
+footer p{margin:0 0 6px}
+
+@media (max-width:560px){
+  h1{font-size:24px}
+  .verdict{width:74px;height:74px;font-size:13px;top:16px;right:16px}
+  .slip-domain{font-size:16px;padding-right:86px}
+}
+@media (prefers-reduced-motion:reduce){
+  .verdict{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain / DNS check</p>
+  <h1>ドメインの向き先を確認する</h1>
+  <p class="lede">配信用ドメインが正しく設定されているかを、いま実際に公開されている情報から確認します。設定を変更するものではないので、何度実行しても安全です。</p>
+
+  <div class="form">
+    <div class="field">
+      <label for="domain">確認するドメイン</label>
+      <span class="hint">例：lp.example.co.jp（https:// や / 以降は入れても自動で除きます）</span>
+      <input type="text" id="domain" placeholder="lp.example.co.jp" autocomplete="off" spellcheck="false" inputmode="url">
+    </div>
+    <div class="field">
+      <label id="modeLabel">どちらの設定をしましたか</label>
+      <span class="hint">ドメインを入力すると自動で選ばれます。違っていれば選び直してください。</span>
+      <div class="modes" role="radiogroup" aria-labelledby="modeLabel">
+        <label class="mode">
+          <input type="radio" name="mode" value="sub" checked>
+          <span><b>サブドメインで配信</b><em>sb.example.co.jp など ／ CNAME → fallback.mysquadbeyond.com</em></span>
+        </label>
+        <label class="mode">
+          <input type="radio" name="mode" value="apex">
+          <span><b>本ドメインで配信</b><em>example.co.jp ／ A → 104.16.117.60</em></span>
+        </label>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="run">確認する</button>
+      <button id="clear" class="ghost" type="button">入力を消す</button>
+    </div>
+  </div>
+
+  <div id="out" aria-live="polite"></div>
+
+  <footer>
+    <p>この確認は公開DNS（Cloudflare / Google）に問い合わせた結果です。設定変更の直後は、反映まで数分〜数十分かかることがあります。</p>
+    <p>SSL証明書の状態や、社内ネットワーク固有の名前解決はここでは確認できません。表示が食い違う場合は、結果をコピーしてサポートまでお送りください。</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var TYPES=[
+    {n:'CNAME',code:5,desc:'別のホスト名への転送'},
+    {n:'A',code:1,desc:'IPv4アドレス'},
+    {n:'AAAA',code:28,desc:'IPv6アドレス'},
+    {n:'NS',code:2,desc:'このドメインを管理するネームサーバー'},
+    {n:'TXT',code:16,desc:'認証用などの文字列'},
+    {n:'MX',code:15,desc:'メールの受信先'},
+    {n:'CAA',code:257,desc:'証明書を発行できる認証局'}
+  ];
+  var TYPE_BY_CODE={1:'A',2:'NS',5:'CNAME',15:'MX',16:'TXT',28:'AAAA',257:'CAA'};
+
+  var $=function(id){return document.getElementById(id)};
+  var out=$('out'), runBtn=$('run');
+  var lastText='';
+
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  })}
+
+  function normalize(raw){
+    var d=(raw||'').trim().toLowerCase();
+    d=d.replace(/^[a-z]+:\/\//,'');   // スキーム
+    d=d.replace(/^[^\/@]*@/,'');      // 誤ってメールを入れた場合
+    d=d.split('/')[0].split('?')[0].split('#')[0];
+    d=d.split(':')[0];                // ポート
+    d=d.replace(/\.+$/,'');
+    return d;
+  }
+  function valid(d){
+    if(!d||d.length>253)return false;
+    if(d.indexOf('.')<0)return false;
+    return /^[a-z0-9\u00a1-\uffff]([a-z0-9\u00a1-\uffff-]*[a-z0-9\u00a1-\uffff])?(\.[a-z0-9\u00a1-\uffff]([a-z0-9\u00a1-\uffff-]*[a-z0-9\u00a1-\uffff])?)+$/.test(d);
+  }
+  function tidy(v){return String(v).replace(/\.$/,'').replace(/^"|"$/g,'')}
+
+  function query(name,type){
+    var cf='https://cloudflare-dns.com/dns-query?name='+encodeURIComponent(name)+'&type='+type;
+    var gg='https://dns.google/resolve?name='+encodeURIComponent(name)+'&type='+type;
+    return fetch(cf,{headers:{'accept':'application/dns-json'}})
+      .then(function(r){if(!r.ok)throw 0;return r.json()})
+      .catch(function(){
+        return fetch(gg,{headers:{'accept':'application/dns-json'}})
+          .then(function(r){if(!r.ok)throw new Error('lookup failed');return r.json()});
+      });
+  }
+
+  var PRESET={
+    sub:{type:'CNAME',value:'fallback.mysquadbeyond.com'},
+    apex:{type:'A',value:'104.16.117.60'}
+  };
+
+  function currentMode(){
+    var el=document.querySelector('input[name=mode]:checked');
+    return el?el.value:'sub';
+  }
+
+  function run(){
+    var domain=normalize($('domain').value);
+    var preset=PRESET[currentMode()]||PRESET.sub;
+    var expected=preset.value, expectedType=preset.type;
+
+    if(!valid(domain)){
+      out.innerHTML='<div class="err"><h2>ドメインを確認してください</h2>'+
+        '<p>「lp.example.co.jp」のような形式で入力してください。ドット（.）が含まれている必要があります。</p></div>';
+      return;
+    }
+
+    runBtn.disabled=true; runBtn.textContent='確認中…';
+    out.innerHTML='<div class="err" style="border-color:var(--rule-strong);border-left-color:var(--ink)">'+
+      '<h2>確認しています</h2><p>'+esc(domain)+' の設定を照会中です。</p></div>';
+
+    Promise.all(TYPES.map(function(t){
+      return query(domain,t.n).then(function(j){return {t:t,j:j}})
+        .catch(function(){return {t:t,j:null}});
+    })).then(function(res){ render(domain,expected,expectedType,res) })
+      .catch(function(){
+        out.innerHTML='<div class="err"><h2>照会できませんでした</h2>'+
+          '<p>通信がブロックされている可能性があります。ネットワークを変えて再度お試しください。</p></div>';
+      })
+      .then(function(){ runBtn.disabled=false; runBtn.textContent='確認する' });
+  }
+
+  function render(domain,expected,expectedType,res){
+    var map={}, nxdomain=true, anyAnswer=false;
+
+    res.forEach(function(r){
+      var list=[];
+      if(r.j){
+        if(r.j.Status===0) nxdomain=false;
+        (r.j.Answer||[]).forEach(function(a){
+          var tn=TYPE_BY_CODE[a.type];
+          if(!tn)return;
+          if(!map[tn])map[tn]=[];
+          map[tn].push({v:tidy(a.data),ttl:a.TTL,from:tidy(a.name)});
+          anyAnswer=true;
+        });
+      }
+      if(!map[r.t.n])map[r.t.n]=map[r.t.n]||[];
+    });
+
+    // 重複除去
+    Object.keys(map).forEach(function(k){
+      var seen={},kept=[];
+      map[k].forEach(function(x){var key=x.v+'|'+x.from;if(!seen[key]){seen[key]=1;kept.push(x)}});
+      map[k]=kept;
+    });
+
+    var verdict,note;
+    if(nxdomain && !anyAnswer){
+      verdict={cls:'bad',label:'未設定'};
+      note={cls:'bad',title:'このドメインは見つかりませんでした',
+        body:'ドメイン自体が存在しないか、DNSレコードがまだ登録されていません。綴りを確認するか、ドメインの管理画面でレコードを追加してください。'};
+    }else if(expected){
+      var want=expectedType?[expectedType]:['CNAME','A','AAAA'];
+      var need=(expectedType?expectedType+' ':'')+expected;
+      var hit=false, mine=[], all=[];
+      want.forEach(function(k){(map[k]||[]).forEach(function(x){mine.push(x.v)})});
+      ['CNAME','A','AAAA'].forEach(function(k){(map[k]||[]).forEach(function(x){all.push(k+' '+x.v)})});
+      mine.forEach(function(v){ if(v.toLowerCase()===expected.toLowerCase()) hit=true });
+
+      if(hit){
+        verdict={cls:'ok',label:'一致'};
+        note={cls:'ok',title:'設定は正しく入っています',
+          body:'現在 '+need+' を向いています。それでもページが表示されない場合は、証明書の発行が終わっていない可能性があります。時間をおいて再度お試しください。'};
+      }else if(all.length===0){
+        verdict={cls:'bad',label:'未設定'};
+        note={cls:'bad',title:'向き先のレコードがありません',
+          body:'CNAME・A・AAAA のいずれも登録されていません。ドメインの管理画面で '+need+' を追加してください。'};
+      }else{
+        verdict={cls:'bad',label:'不一致'};
+        note={cls:'bad',title:'案内された値と違う設定になっています',
+          body:'必要な設定：'+need+' ／ 現在の設定：'+all.join('、')+'。古いレコードが残っていると新しい設定が反映されないので、削除してから登録し直してください。'};
+      }
+    }else{
+      verdict={cls:'warn',label:'現状<br>確認'};
+      note={cls:'warn',title:'現在の設定を表示しています',
+        body:'正しいかどうかの判定には、サポートから案内された向き先の値を入力してください。'};
+    }
+
+    var now=new Date();
+    var stamp=now.getFullYear()+'-'+p(now.getMonth()+1)+'-'+p(now.getDate())+' '+p(now.getHours())+':'+p(now.getMinutes());
+
+    var html=''+
+      '<div class="slip">'+
+        '<div class="verdict '+verdict.cls+'"><span>'+verdict.label+'</span></div>'+
+        '<div class="slip-head">'+
+          '<div class="slip-domain">'+esc(domain)+'</div>'+
+          '<div class="slip-meta">照会 '+stamp+'</div>'+
+        '</div>'+
+        '<div class="note '+note.cls+'"><strong>'+esc(note.title)+'</strong>'+esc(note.body)+'</div>';
+
+    TYPES.forEach(function(t){
+      var rows=map[t.n]||[];
+      html+='<div class="rec-group"><div class="rec-type">'+t.n+' &nbsp;— &nbsp;'+esc(t.desc)+'</div>';
+      if(rows.length===0){
+        html+='<div class="rec-none">登録なし</div>';
+      }else{
+        rows.forEach(function(r){
+          html+='<div class="rec"><div><span class="rec-val">'+esc(r.v)+'</span>'+
+            (r.from&&r.from!==domain?'<div class="chain">'+esc(r.from)+' の応答</div>':'')+
+            '</div><div class="rec-ttl">TTL '+esc(r.ttl)+'s</div></div>';
+        });
+      }
+      html+='</div>';
+    });
+
+    html+='<div class="slip-foot">'+
+        '<button class="ghost" id="copy" type="button">この結果をコピー</button>'+
+        '<span class="copied" id="copied" hidden>コピーしました</span>'+
+      '</div></div>';
+
+    out.innerHTML=html;
+    lastText=asText(domain,(expectedType?expectedType+' ':'')+expected,stamp,verdict,map);
+    $('copy').addEventListener('click',function(){
+      navigator.clipboard.writeText(lastText).then(function(){
+        var c=$('copied'); c.hidden=false; setTimeout(function(){c.hidden=true},2000);
+      });
+    });
+  }
+
+  function p(n){return n<10?'0'+n:''+n}
+
+  function asText(domain,expected,stamp,verdict,map){
+    var L=['【ドメイン設定 確認結果】',
+      'ドメイン: '+domain,
+      '照会日時: '+stamp,
+      '判定: '+verdict.label.replace('<br>','')];
+    if(expected)L.push('必要な設定: '+expected);
+    L.push('');
+    TYPES.forEach(function(t){
+      var rows=map[t.n]||[];
+      L.push('['+t.n+'] '+(rows.length?rows.map(function(r){return r.v}).join(' / '):'登録なし'));
+    });
+    return L.join('\n');
+  }
+
+  // 「example.co.jp」のような2階層のTLDを本ドメインとして扱うための判定
+  var SLD={co:1,ne:1,or:1,ac:1,ad:1,ed:1,go:1,gr:1,lg:1,com:1,net:1,org:1,gov:1,edu:1};
+  function isSubdomain(d){
+    var p=d.split('.');
+    if(p.length<3)return false;
+    return p.length>(SLD[p[p.length-2]]?3:2);
+  }
+
+  var modeTouched=false;
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=mode]'),function(el){
+    el.addEventListener('change',function(){ modeTouched=true });
+  });
+  $('domain').addEventListener('input',function(){
+    if(modeTouched)return;
+    var d=normalize($('domain').value);
+    if(!valid(d))return;
+    var want=isSubdomain(d)?'sub':'apex';
+    var el=document.querySelector('input[name=mode][value="'+want+'"]');
+    if(el)el.checked=true;
+  });
+
+  runBtn.addEventListener('click',run);
+  $('domain').addEventListener('keydown',function(e){if(e.key==='Enter')run()});
+  $('clear').addEventListener('click',function(){
+    $('domain').value=''; out.innerHTML='';
+    modeTouched=false;
+    document.querySelector('input[name=mode][value="sub"]').checked=true;
+    $('domain').focus();
+  });
+})();
+</script>
+</body>
+</html>
