@@ -96,7 +96,18 @@ var PRESET={
 
 静的ホスティングにファイルを置くだけです。Cloudflare Pages / GitHub Pages とも、ルートに `index.html` があれば動きます（ビルドコマンドは不要）。
 
-顧客が「これは公式のツールか」と迷わないよう、`squadbeyond.com` 配下のサブドメインか、FAQサイト配下に置くことを推奨します。
+現在は同じ中身が2か所で動いています。
+
+- Cloudflare Pages: https://domain-check-3h2.pages.dev
+- GitHub Pages: https://squad-customersupport.github.io/domain-check/
+
+**Cloudflare Pages は GitHub と連携していません。** GitHubで `index.html` を直すとGitHub Pagesだけが更新され、Cloudflare側は古いままになります。Cloudflare側も直すには、リポジトリを手元に落として次を実行します。
+
+```
+npx wrangler pages deploy . --project-name domain-check --branch main
+```
+
+顧客が「これは公式のツールか」と迷わないよう、`squadbeyond.com` 配下のサブドメインか、FAQサイト配下に置くことを推奨します。Cloudflare Pages のカスタムドメインを当てれば、`domain-check-3h2.pages.dev` という自動採番のURLを顧客に見せずに済みます。
 
 ## 動作確認
 
