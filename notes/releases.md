@@ -29,3 +29,30 @@ GitHub Pages（https://squad-customersupport.github.io/domain-check/）で公開
 ### 未実施
 GitHub と Cloudflare Pages は連携していない。GitHub で `index.html` を直しても
 Cloudflare 側は古いまま。反映には再アップロードが必要（`notes/decision-log.md` 参照）。
+
+## 2026-09-04 ② GitHub push で自動デプロイされるようにした／旧URLを案内ページに
+
+### 内容
+- `.github/workflows/deploy.yml` を追加。`main` の公開ファイルが更新されると
+  GitHub Actions が `cloudflare/wrangler-action` で Cloudflare Pages へアップロードする。
+  公開するのは index.html のみ（README・notes は載せない）。
+- GitHub Pages の公開元を `main` から `gh-pages` ブランチへ変更。
+  `gh-pages` には https://domain-check-3h2.pages.dev への案内ページ（meta refresh + JS）だけを置いた。
+  旧URLを案内済みの人が新URLにたどり着けるようにするため、公開自体は止めていない。
+
+### 環境・設定
+- 認証は組織シークレット `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`
+  （Squad-customersupport の Organization secrets、対象リポジトリは media-shrink と domain-check のみ）。
+- Cloudflare のトークンは「アカウント > Cloudflare Pages > 編集」の権限だけを持つカスタムトークン。
+
+### 確認したこと
+- `main` の `index.html` にマーカーを入れて push → Actions 成功 → https://domain-check-3h2.pages.dev にマーカーが出ることを確認。
+  マーカーを消して push → 再び消えることも確認（両方向で反映される）。
+- 旧URL（https://squad-customersupport.github.io/domain-check/）が案内ページを返し、
+  転送先が https://domain-check-3h2.pages.dev になっていることを確認。
+
+### つまずいた点（次回のため）
+シークレット登録で3回失敗した。順に「値に `Secret: ` が混入」「トークン欄にアカウントIDを貼っていた」
+「Cloudflareのコピーボタンが効かず、直前のクリップボード（アカウントID）が貼られていた」。
+GitHub側の値は読み出せないので、`${#TOKEN}` の文字数と `/user/tokens/verify` の応答を出す
+一時ワークフローを置いて切り分けた（原因判明後に削除済み）。

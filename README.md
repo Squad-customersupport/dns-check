@@ -96,16 +96,18 @@ var PRESET={
 
 静的ホスティングにファイルを置くだけです。Cloudflare Pages / GitHub Pages とも、ルートに `index.html` があれば動きます（ビルドコマンドは不要）。
 
-現在は同じ中身が2か所で動いています。
+公開URLは https://domain-check-3h2.pages.dev です。
+旧URL（https://squad-customersupport.github.io/domain-check/）は、新URLへの案内ページに変わっています。すでに案内した人がたどり着けるように残してあるだけです。
 
-- Cloudflare Pages: https://domain-check-3h2.pages.dev
-- GitHub Pages: https://squad-customersupport.github.io/domain-check/
+### 直しかた
 
-**Cloudflare Pages は GitHub と連携していません。** GitHubで `index.html` を直すとGitHub Pagesだけが更新され、Cloudflare側は古いままになります。Cloudflare側も直すには、リポジトリを手元に落として次を実行します。
+1. GitHubで **`main` ブランチの** `index.html` を開き、鉛筆アイコンから編集する
+2. Commit changes を押す
+3. 1〜2分で公開URLに反映される
 
-```
-npx wrangler pages deploy . --project-name domain-check --branch main
-```
+コマンドを打つ必要はありません。`main` を更新すると GitHub Actions が動き、Cloudflare Pages へ自動でアップロードされます（`.github/workflows/deploy.yml`）。反映されないときは GitHubの **Actions** タブにエラーが出ています。手動でやり直す場合は Actions タブ →「Deploy to Cloudflare Pages」→「Run workflow」。
+
+ブランチは2つあります。`main` がツール本体で、直すのはこちら。`gh-pages` は旧URLの案内ページ専用なので触る必要はありません。
 
 顧客が「これは公式のツールか」と迷わないよう、`squadbeyond.com` 配下のサブドメインか、FAQサイト配下に置くことを推奨します。Cloudflare Pages のカスタムドメインを当てれば、`domain-check-3h2.pages.dev` という自動採番のURLを顧客に見せずに済みます。
 
