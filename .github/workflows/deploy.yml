@@ -1,0 +1,37 @@
+# GitHubで index.html を直すと、Cloudflare Pages に自動で反映される仕組み。
+#
+# 動く条件: リポジトリの Settings > Secrets に CLOUDFLARE_API_TOKEN と
+# CLOUDFLARE_ACCOUNT_ID が登録されていること。
+# 手動で流したいときは GitHubの Actions タブ > Deploy to Cloudflare Pages > Run workflow。
+
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # 公開するファイルだけを dist にまとめる（README や notes は公開ページに載せない）
+      - name: 公開ファイルをまとめる
+        run: |
+          mkdir -p dist
+          cp index.html dist/
+          ls -la dist
+
+      - name: Cloudflare Pages にアップロード
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name domain-check --branch main --commit-dirty=true
