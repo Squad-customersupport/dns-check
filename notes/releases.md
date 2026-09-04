@@ -56,3 +56,16 @@ Cloudflare 側は古いまま。反映には再アップロードが必要（`no
 「Cloudflareのコピーボタンが効かず、直前のクリップボード（アカウントID）が貼られていた」。
 GitHub側の値は読み出せないので、`${#TOKEN}` の文字数と `/user/tokens/verify` の応答を出す
 一時ワークフローを置いて切り分けた（原因判明後に削除済み）。
+
+## 2026-09-04 ③ 公開URLを squadbeyond-domain-check.pages.dev に変更
+
+- **新URL**: https://squadbeyond-domain-check.pages.dev
+- **旧URL**: `domain-check-3h2.pages.dev`（本人に案内する前に変更したので移行の影響なし。プロジェクトごと削除）
+- Pages プロジェクト名を `domain-check` → `squadbeyond-domain-check` に。
+  Cloudflare は `*.pages.dev` を変更できないため、プロジェクトを作り直す形になった。
+- `.github/workflows/deploy.yml` の `--project-name` を差し替え、`gh-pages` の案内ページの
+  転送先も新URLに更新。
+
+### 確認したこと
+- `main` への push で新プロジェクトへ自動デプロイされること
+- 旧GitHub Pages URL の案内ページが新URLへ転送すること

@@ -50,3 +50,20 @@
 - **確度**: 確定仕様。
 - **副作用**: ブラウザのブックマークは自動では書き換わらないため、案内ページに
   「ブックマークを登録し直してください」を表示している。
+
+## 2026-09-04 公開URLは squadbeyond-domain-check.pages.dev にする
+
+- **背景**: 自動採番の `domain-check-3h2.pages.dev` は、顧客が「これは公式のツールか」と判断しにくい。
+- **決定**: プロジェクトを作り直し、`squadbeyond-domain-check.pages.dev` にした（本人選択 2026-09-04）。
+- **理由**: 顧客が知っている製品名が入るため。`squad-domain-check` は社外には会社が伝わりにくく、
+  `squaddomain-check` は単語がくっついて読みにくいので採らなかった。
+  Cloudflare は `*.pages.dev` を後から変更できないが、URLを案内する前だったので作り直しの痛みがなかった。
+- **確度**: 事実（`*.pages.dev` の変更不可は Cloudflare の仕様）。
+
+## 2026-09-04 独自ドメインは当てていない（要インフラ依頼）
+
+- **決定**: `domain-check.squadbeyond.com` のような独自ドメインは今回は当てず、`pages.dev` のままにした。
+- **理由**: `squadbeyond.com` のDNSは **Route 53（AWS）** で管理されており（このツール自身で確認）、
+  Cloudflare のこのアカウントにゾーンが無い。CNAMEの追加はAWS側の権限を持つ人への依頼が必要。
+- **確度**: 事実（NSレコードの実測）。
+- **やる場合**: Cloudflare Pages 側でカスタムドメインを追加 → 指示されたCNAMEを Route 53 に追加。

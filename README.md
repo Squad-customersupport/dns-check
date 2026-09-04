@@ -96,7 +96,7 @@ var PRESET={
 
 静的ホスティングにファイルを置くだけです。Cloudflare Pages / GitHub Pages とも、ルートに `index.html` があれば動きます（ビルドコマンドは不要）。
 
-公開URLは https://domain-check-3h2.pages.dev です。
+公開URLは https://squadbeyond-domain-check.pages.dev です。
 旧URL（https://squad-customersupport.github.io/domain-check/）は、新URLへの案内ページに変わっています。すでに案内した人がたどり着けるように残してあるだけです。
 
 ### 直しかた
@@ -109,7 +109,7 @@ var PRESET={
 
 ブランチは2つあります。`main` がツール本体で、直すのはこちら。`gh-pages` は旧URLの案内ページ専用なので触る必要はありません。
 
-顧客が「これは公式のツールか」と迷わないよう、`squadbeyond.com` 配下のサブドメインか、FAQサイト配下に置くことを推奨します。Cloudflare Pages のカスタムドメインを当てれば、`domain-check-3h2.pages.dev` という自動採番のURLを顧客に見せずに済みます。
+顧客が「これは公式のツールか」と迷わないよう、`squadbeyond.com` 配下のサブドメインか、FAQサイト配下に置くことを推奨します。Cloudflare Pages のカスタムドメインを当てれば、末尾が `pages.dev` のURLを顧客に見せずに済みます。ただし `squadbeyond.com` のDNSは Route 53（AWS）で管理されているため、CNAMEの追加はAWS側の作業になります。
 
 ## 動作確認
 

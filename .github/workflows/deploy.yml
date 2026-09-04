@@ -34,4 +34,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name domain-check --branch main --commit-dirty=true
+          command: pages deploy dist --project-name squadbeyond-domain-check --branch main --commit-dirty=true
